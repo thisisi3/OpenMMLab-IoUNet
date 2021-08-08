@@ -1,6 +1,7 @@
 import mmcv
 
 from .version import __version__, short_version
+from . import iounet
 
 
 def digit_version(version_str):
