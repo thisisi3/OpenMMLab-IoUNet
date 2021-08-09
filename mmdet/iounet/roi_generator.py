@@ -76,8 +76,6 @@ class RoIGenerator(torch.nn.Module):
             num_chosen = chosen_delta.size(0)
             delta_starts.append(delta_starts[-1] + num_chosen)
             delta_nums.append(num_chosen)
-            print('{lo}-{hi}: {num}, {pre}'.format(
-                lo=lo, hi=hi, num=num_chosen, pre=pre_num_chosen))
         self.register_buffer('delta', torch.cat(delta_list))
         self.delta_starts = delta_starts
         self.delta_nums = delta_nums

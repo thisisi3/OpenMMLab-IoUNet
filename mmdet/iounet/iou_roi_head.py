@@ -18,7 +18,6 @@ class IoURoIHead(StandardRoIHead):
         self.roi_generator = roi_generator
         if roi_generator is not None:
             self.roi_generator = RoIGenerator(**roi_generator)
-        print(self)
 
     def init_assigner_sampler(self):
         self.bbox_assigner = None
