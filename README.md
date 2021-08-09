@@ -56,10 +56,10 @@ Results by this implementation:
 
 Log and model:
 
-|                      | backbone | Lr schd | bbox AP | Config | Log  | Model                                                        |
-| -------------------- | -------- | ------- | ------- | ------ | ---- | ------------------------------------------------------------ |
-| FasterRCNN_retrained | R-50-FPN | 1x      | 37.6    |        |      | [baidu ](https://pan.baidu.com/s/1_IAGw_65fmcPFz8RQDzREw) [wuef] |
-| FasterRCNN+IoUNet    | R-50-FPN | 1x      | 39.3    |        |      | [baidu](https://pan.baidu.com/s/1hvWcMA4V9TdcFqaw8NFMRw)  [evrp] |
+|                      | backbone | Lr schd | bbox AP | Config                                                       | Log                                                          | Model                                                        |
+| -------------------- | -------- | ------- | ------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| FasterRCNN_retrained | R-50-FPN | 1x      | 37.6    | [config](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_r50_fpn_1x_coco.py) | [log](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_r50_fpn_1x_coco_20210803_233510.log.json) | [baidu ](https://pan.baidu.com/s/1_IAGw_65fmcPFz8RQDzREw) [wuef] |
+| FasterRCNN+IoUNet    | R-50-FPN | 1x      | 39.3    | [config](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_1x_coco.py) | [log](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_1x_coco_20210805_085322.log.json) | [baidu](https://pan.baidu.com/s/1hvWcMA4V9TdcFqaw8NFMRw)  [evrp] |
 
 **AP in the log:** it is 39.2 in the log, later I get 39.3 by fixing a bug in inference code.
 
