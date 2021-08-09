@@ -1,4 +1,4 @@
-### Introduction
+## Introduction
 
 This project is trying to reproduce IoUNet, which is proposed in paper [Acquisition of Localization Confidence for Accurate Object Detection](https://arxiv.org/pdf/1807.11590.pdf). 
 
@@ -14,7 +14,7 @@ Quick peek at the result:
 
 
 
-### Implementation
+## Implementation
 
 **PreciseRoIPooling:** it is a novel RoI pooling method proposed by the paper, they did release the CUDA implementation [here](https://github.com/vacancy/PreciseRoIPooling). So I directly use their implementation. To my best knowledge, this is the only code released. 
 
@@ -24,7 +24,7 @@ For the rest, I closely follow the paper.
 
 
 
-### Experiments
+## Experiments
 
 **MMDetection:** this project is based on version v2.14.0.
 
@@ -65,7 +65,7 @@ Log and model:
 
 
 
-### Usage
+## Usage
 
 You can train and inference the model like any other models in MMDetection, see [docs](https://mmdetection.readthedocs.io/) for details.
 
@@ -73,7 +73,7 @@ You probably need **Ninja** in order to use ReciseRoIPooling.
 
 
 
-### Acknowledgement
+## Acknowledgement
 
 [PreciseRoIPooling](https://github.com/vacancy/PreciseRoIPooling)
 
