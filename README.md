@@ -11,6 +11,8 @@ Quick peek at the result:
 > **The paper:** improved the R50 baseline by 1.7 AP.
 >
 > **This implementation:** improved the R50 baseline by 1.7 AP.
+>
+> **Extra:** by replacing the original SmoothL1Loss with BCE loss, we gain another 0.3 AP.
 
 
 
@@ -58,12 +60,32 @@ Results by this implementation:
 
 Log and model:
 
-|                      | backbone | Lr schd | bbox AP | Config                                                       | Log                                                          | Model                                                        |
-| -------------------- | -------- | ------- | ------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| FasterRCNN_retrained | R-50-FPN | 1x      | 37.6    | [config](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_r50_fpn_1x_coco.py) | [log](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_r50_fpn_1x_coco_20210803_233510.log.json) | [baidu ](https://pan.baidu.com/s/1_IAGw_65fmcPFz8RQDzREw) [wuef] |
-| FasterRCNN+IoUNet    | R-50-FPN | 1x      | 39.3    | [config](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_1x_coco.py) | [log](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_1x_coco_20210805_085322.log.json) | [baidu](https://pan.baidu.com/s/1hvWcMA4V9TdcFqaw8NFMRw)  [evrp] |
+|                      | backbone | Lr schd | bbox AP | Config                                                       | Log                                                          | Model                                                        | GPUs |
+| -------------------- | -------- | ------- | ------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ---- |
+| FasterRCNN_retrained | R-50-FPN | 1x      | 37.6    | [config](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_r50_fpn_1x_coco.py) | [log](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_r50_fpn_1x_coco_20210803_233510.log.json) | [baidu ](https://pan.baidu.com/s/1_IAGw_65fmcPFz8RQDzREw) [wuef] | 2    |
+| FasterRCNN+IoUNet    | R-50-FPN | 1x      | 39.3    | [config](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_1x_coco.py) | [log](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_1x_coco_20210805_085322.log.json) | [baidu](https://pan.baidu.com/s/1hvWcMA4V9TdcFqaw8NFMRw)  [evrp] | 2    |
 
 **AP in the log:** it is 39.2 in the log, later I get 39.3 by fixing a bug in inference code.
+
+
+
+## Extra
+
+This is not part of the reproduce. 
+
+The paper uses SmoothL1Loss to estimate IoU prediction error, we replace it with BCE loss and gain another 0.3 AP:
+
+|                       | AP   | AP50 | AP60 | AP70 | AP80 | AP90 |
+| --------------------- | ---- | ---- | ---- | ---- | ---- | ---- |
+| FasterRCNN_retrained  | 37.6 | 58.4 | 54.1 | 46.6 | 33.2 | 11.2 |
+| FasterRCNN+IoUNet_BCE | 39.6 | 58.0 | 53.5 | 46.9 | 37.2 | 18.3 |
+| Improvement           | +2.0 | -0.4 | -0.6 | +0.3 | +4.0 | +7.1 |
+
+Log and model:
+
+|                       | backbone | Lr schd | bbox AP | Config                                                       | Log                                                          | Model   | GPUs |
+| --------------------- | -------- | ------- | ------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------- | ---- |
+| FasterRCNN+IoUNet_BCE | R-50-FPN | 1x      | 39.6    | [config](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_bce_1x_coco.py) | [log](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_bce_1x_coco_20210808_232046.log.json) | pending | 2    |
 
 
 
@@ -77,19 +99,10 @@ You probably need **Ninja** in order to use ReciseRoIPooling.
 
 ## Acknowledgement
 
+ [Acquisition of Localization Confidence for Accurate Object Detection](https://arxiv.org/pdf/1807.11590.pdf)
+
 [PreciseRoIPooling](https://github.com/vacancy/PreciseRoIPooling)
 
 [MMDetection](https://github.com/open-mmlab/mmdetection)
 
 [MMCV](https://github.com/open-mmlab/mmcv)
-
-
-
-
-
-
-
-
-
-
-
