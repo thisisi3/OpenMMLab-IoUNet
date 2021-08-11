@@ -83,9 +83,9 @@ The paper uses SmoothL1Loss to estimate IoU prediction error, we replace it with
 
 Log and model:
 
-|                       | backbone | Lr schd | bbox AP | Config                                                       | Log                                                          | Model   | GPUs |
-| --------------------- | -------- | ------- | ------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------- | ---- |
-| FasterRCNN+IoUNet_BCE | R-50-FPN | 1x      | 39.6    | [config](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_bce_1x_coco.py) | [log](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_bce_1x_coco_20210808_232046.log.json) | pending | 2    |
+|                       | backbone | Lr schd | bbox AP | Config                                                       | Log                                                          | Model                                                        | GPUs |
+| --------------------- | -------- | ------- | ------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ---- |
+| FasterRCNN+IoUNet_BCE | R-50-FPN | 1x      | 39.6    | [config](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_bce_1x_coco.py) | [log](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_bce_1x_coco_20210808_232046.log.json) | [baidu](https://pan.baidu.com/s/1PMHNagwZFRwZTKkk88k8IA) [8kt9] | 2    |
 
 
 
