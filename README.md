@@ -165,7 +165,7 @@ From above chart we see lambda is optimal around 2.0 for all 4 experiments.
 | + lambda=2.0         | 39.7 | +2.1  |
 | + new iou_nms        | 40.0 | +2.4  |
 
-The config for the improved version can be found here.
+The config for the improved version can be found [here](https://github.com/thisisi3/OpenMMLab-IoUNet/blob/main/assets/faster_rcnn_iou_r50_fpn_imprv_1x_coco.py).
 
 
 
