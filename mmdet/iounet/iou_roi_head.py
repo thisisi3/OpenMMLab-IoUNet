@@ -1,9 +1,7 @@
-from ..models import HEADS, StandardRoIHead, build_head
-from ..core import bbox2roi, bbox2result, build_sampler, build_assigner
+from mmdet.models import HEADS, StandardRoIHead, build_head
+from mmdet.core import bbox2roi, bbox2result, build_sampler, build_assigner
 from .roi_generator import RoIGenerator
 from .nms import batched_iou_nms
-from .utils import restrict_bbox, xyxy2wh
-
 import torch
 
 @HEADS.register_module()
@@ -63,11 +61,9 @@ class IoURoIHead(StandardRoIHead):
         losses = dict()
         # bbox head forward and loss
         if self.with_bbox:
-            bbox_results = self._bbox_forward_train(x, sampling_results,
-                                                    gt_bboxes, gt_labels,
-                                                    img_metas)
+            bbox_results = self._bbox_forward_train(
+                x, sampling_results, gt_bboxes, gt_labels, img_metas)
             losses.update(bbox_results['loss_bbox'])
-
 
         ################ the IoU part #################
         # IoUHead forward and loss
@@ -80,14 +76,11 @@ class IoURoIHead(StandardRoIHead):
         iou_rois_list = []
         iou_sampling_results = []
         for i in range(len(img_metas)):
-            iou_rois = self.roi_generator.generate_roi(gt_bboxes[i])
-            iou_rois = restrict_bbox(iou_rois, img_metas[i]['img_shape'])
-
-            
+            iou_rois = self.roi_generator.generate_roi(
+                gt_bboxes[i], img_metas[i]['img_shape'][:2])
             iou_rois_list.append(iou_rois)
-            iou_assign_result = self.iou_assigner.assign(iou_rois, gt_bboxes[i],
-                                                         gt_bboxes_ignore[i],
-                                                         gt_labels[i])
+            iou_assign_result = self.iou_assigner.assign(
+                iou_rois, gt_bboxes[i], gt_bboxes_ignore[i], gt_labels[i])
             iou_sampling_result = self.iou_sampler.sample(
                 iou_assign_result,
                 iou_rois,
@@ -95,10 +88,8 @@ class IoURoIHead(StandardRoIHead):
                 gt_labels=gt_labels[i],
                 feats=[lvl_feat[i][None] for lvl_feat in x])
             iou_sampling_results.append(iou_sampling_result)
-            
-        iou_losses = self._iou_forward_train(x, iou_sampling_results, gt_bboxes, gt_labels,
-                                             img_metas)
-            
+        iou_losses = self._iou_forward_train(
+            x, iou_sampling_results, gt_bboxes, gt_labels, img_metas)
         losses.update(iou_losses)
         return losses
 
@@ -115,26 +106,10 @@ class IoURoIHead(StandardRoIHead):
             iou_score, sampling_results, gt_bboxes, gt_labels, rois, img_metas)
         return dict(loss_iou=loss_iou)
 
-    def simple_test(self,
-                    x,
-                    proposal_list,
-                    img_metas,
-                    proposals=None,
-                    rescale=False):
-        assert self.with_bbox, 'Bbox head must be implemented.'
-        det_bboxes, det_labels = self.simple_test_bboxes(
-            x, img_metas, proposal_list, self.test_cfg, rescale=rescale)
-
-        bbox_results = [
-            bbox2result(det_bboxes[i], det_labels[i],
-                        self.bbox_head.num_classes)
-            for i in range(len(det_bboxes))
-        ]
-        return bbox_results
 
     # since it calls roi_extractor, we put refinement in roi_head
     # TODO: this could be done together for all images
-    def refine_by_iou(self, x, bbox, score, iou, label, img_idx, img_meta, cfg):
+    def refine_by_iou(self, x, bbox, score, label, img_idx, img_meta, cfg):
         """Refine bboxes by gradient of iou_score w.r.t the bboxes in one image"""
         det_bboxes, det_scores, det_ious, det_labels = [], [], [], []
         with torch.set_grad_enabled(True):
@@ -153,14 +128,16 @@ class IoURoIHead(StandardRoIHead):
             for i in range(cfg.t):
                 if prev_score.size(0) <= 0:
                     break
-                prev_iou.sum().backward()
+                #prev_iou.sum().backward()
+                prev_bbox_grad = torch.autograd.grad(
+                    prev_iou.sum(), prev_bbox, only_inputs=True)[0]
                 if keep_mask is not None:
                     # filter bbox and grad after backward
-                    bbox_grad = prev_bbox.grad[~keep_mask]
+                    bbox_grad = prev_bbox_grad[~keep_mask]
                     prev_bbox = prev_bbox[~keep_mask]
                 else:
-                    bbox_grad = prev_bbox.grad
-                w, h = xyxy2wh(prev_bbox)
+                    bbox_grad = prev_bbox_grad
+                w, h = prev_bbox[..., 2]-prev_bbox[..., 0], prev_bbox[..., 3]-prev_bbox[..., 1]
                 scale = torch.stack([w, h, w, h], dim=1)
                 delta = cfg.lamb * bbox_grad * scale
                 # apply gradient ascent
@@ -207,14 +184,12 @@ class IoURoIHead(StandardRoIHead):
         bbox_results = self._bbox_forward(x, rois)
         img_shapes = tuple(meta['img_shape'] for meta in img_metas)
         scale_factors = tuple(meta['scale_factor'] for meta in img_metas)
-
         # split batch bbox prediction back to each image
         cls_score = bbox_results['cls_score']
         bbox_pred = bbox_results['bbox_pred']
         num_proposals_per_img = tuple(len(p) for p in proposals)
         rois = rois.split(num_proposals_per_img, 0)
         cls_score = cls_score.split(num_proposals_per_img, 0)
-
         # some detector with_reg is False, bbox_pred will be None
         if bbox_pred is not None:
             # TODO move this to a sabl_roi_head
@@ -226,7 +201,6 @@ class IoURoIHead(StandardRoIHead):
                     bbox_pred, num_proposals_per_img)
         else:
             bbox_pred = (None, ) * len(proposals)
-
         det_bboxes, det_labels = [], []
         iou_cfg = rcnn_test_cfg.get('iou', None)
         if iou_cfg is None:
@@ -268,14 +242,15 @@ class IoURoIHead(StandardRoIHead):
             # apply iou_nms
             det_bbox, det_score, det_iou, det_label = batched_iou_nms(
                 nms_regressed, nms_cls_score, nms_iou_score, nms_label,
-                iou_cfg.nms.iou_threshold, rcnn_test_cfg.score_thr)
+                iou_cfg.nms.iou_threshold, rcnn_test_cfg.score_thr,
+                guide=iou_cfg.nms.get('guide', 'rank'))
             if iou_cfg.get('refine', None) is not None and det_bbox.size(0) > 0:
                 det_bbox  = det_bbox[:iou_cfg.refine.pre_refine]
                 det_score = det_score[:iou_cfg.refine.pre_refine]
                 det_iou   = det_iou[:iou_cfg.refine.pre_refine]
                 det_label = det_label[:iou_cfg.refine.pre_refine]
                 det_bbox, det_score, det_label = self.refine_by_iou(
-                    x, det_bbox, det_score, det_iou, det_label, i, img_metas[i],
+                    x, det_bbox, det_score, det_label, i, img_metas[i],
                     iou_cfg.refine)
             if rescale and det_bbox.size(0) > 0:
                 scale_factor = det_bbox.new_tensor(scale_factors[i])

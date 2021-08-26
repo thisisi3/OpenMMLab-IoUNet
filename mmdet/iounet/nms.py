@@ -1,34 +1,15 @@
-from torchvision.ops import nms as nms_torch
-from ..core import bbox_overlaps
+from mmdet.core import bbox_overlaps
+from mmcv.ops import nms as nms_mmcv
 import torch
 
-def batched_iou_nms(bboxes, scores, locs, labels, iou_threshold, score_thr=None):
-    """IoU guided NMS, bboxes are sorted by iou, score of the current bbox is taking the max of 
-    scores of all the bboxes suppressed by the bbox.
-    
-    Args:
-        bboxes (Tensor): shape (n, 4)
-        scores (Tensor): shape (n,), classification score
-        locs (Tensor): shape(n,) iou score
-        labels (Tensor): label of bboxes, help to do batched nms
-        iou_threshold (float): iou threshold
-        score_thr (float): filter scores belowing this number"""
-    filt_mask = scores >= score_thr
-    if filt_mask.sum().item() == 0:
-        return \
-            bboxes.new_empty(0, 4), \
-            scores.new_empty(0), \
-            locs.new_empty(0), \
-            labels.new_empty(0)
-    bboxes = bboxes[filt_mask]
-    scores = scores[filt_mask]
-    locs   = locs[filt_mask]
-    labels = labels[filt_mask]
-    nms_bboxes = bboxes + (labels * (bboxes.max() + 1)).view(-1, 1)
-    
-    keep = nms_torch(nms_bboxes, locs, iou_threshold)
-    keep_bboxes = nms_bboxes[keep]
-    overlaps = bbox_overlaps(keep_bboxes, nms_bboxes)
+def iou_nms(bboxes, scores, locs, iou_threshold):
+    """
+    Use localization score to guide NMS. Bboxes are sorted by locs, the final score is
+    taking the max of scores of all suppressed bboxes.
+    """
+    _, keep = nms_mmcv(bboxes, locs, iou_threshold)
+    keep_bboxes = bboxes[keep]
+    overlaps = bbox_overlaps(keep_bboxes, bboxes)
     # find the suppressed bboxes for each kept bbox
     suppressed = overlaps > iou_threshold
     # accumulate suppression count
@@ -41,6 +22,47 @@ def batched_iou_nms(bboxes, scores, locs, labels, iou_threshold, score_thr=None)
     keep_scores = span_scores.max(1)[0]
     # sort by scores, following tradition
     keep_scores, srt_idx = keep_scores.sort(descending=True)
-    keep = keep[srt_idx]
-    return bboxes[keep], keep_scores, locs[keep], labels[keep]
+    return keep[srt_idx], keep_scores
+
+
+def batched_iou_nms(bboxes, scores, locs, labels, iou_threshold, score_thr=None, guide='rank'):
+    """IoU guided NMS.
+    
+    Args:
+        bboxes (Tensor): shape (n, 4)
+        scores (Tensor): shape (n,), classification score
+        locs (Tensor): shape(n,) localization score/iou score
+        labels (Tensor): label of bboxes, help to do batched nms
+        iou_threshold (float): iou threshold
+        score_thr (float): filter scores belowing this number
+        guide (str): decide how to use iou score to guide nms, 
+            supported key words: none, rank, weight"""
+    if score_thr is not None:
+        filt_mask = scores >= score_thr
+        if filt_mask.sum().item() == 0:
+            return \
+                bboxes.new_empty(0, 4), \
+                scores.new_empty(0), \
+                locs.new_empty(0), \
+                labels.new_empty(0)
+        bboxes = bboxes[filt_mask]
+        scores = scores[filt_mask]
+        locs   = locs[filt_mask]
+        labels = labels[filt_mask]
+    nms_bboxes = bboxes + (labels * (bboxes.max() + 1)).view(-1, 1)
+    # 'rank' is the official iou guided nms
+    if guide == 'rank':
+        keep, keep_scores = iou_nms(nms_bboxes, scores, locs, iou_threshold)
+        return bboxes[keep], keep_scores, locs[keep], labels[keep]
+    # use the product of cls_score * iou_score as the nms_locs
+    elif guide == 'weight':
+        nms_locs = scores * locs
+        keep, keep_scores = iou_nms(nms_bboxes, scores, nms_locs, iou_threshold)
+        return bboxes[keep], keep_scores, locs[keep], labels[keep]
+    # do not utilize iou_score in nms
+    elif guide == 'none':
+        _, keep = nms_mmcv(nms_bboxes, scores, iou_threshold)
+        return bboxes[keep], scores[keep], locs[keep], labels[keep]
+    else:
+        raise RuntimeError('guide type not supported: {}'.format(guide))
 

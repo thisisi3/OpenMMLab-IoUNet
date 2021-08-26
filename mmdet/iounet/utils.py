@@ -1,46 +1,25 @@
 import torch
 
-def xyxy2wh(bboxes):
-    return bboxes[..., 2] - bboxes[..., 0], bboxes[..., 3] - bboxes[..., 1]
+# from torchvision
+def clip_bboxes_to_image(bboxes, size):
+    """
+    Clip boxes so that they lie inside an image of size `size`.
 
-def xyxy2cxcywh(bboxes):
-    w, h = xyxy2wh(bboxes)
-    return torch.stack([
-        (bboxes[..., 0] + bboxes[..., 2]) / 2,
-        (bboxes[..., 1] + bboxes[..., 3]) / 2,
-        w,
-        h], dim=-1)
+    Args:
+        boxes (Tensor[N, 4]): boxes in ``(x1, y1, x2, y2)`` format
+            with ``0 <= x1 < x2`` and ``0 <= y1 < y2``.
+        size (Tuple[height, width]): size of the image
 
-def cxcywh2xyxy(bboxes):
-    cx, cy, w, h = bboxes[..., 0], bboxes[..., 1], bboxes[..., 2], bboxes[..., 3]
-    return torch.stack([
-        cx - w/2,
-        cy - h/2,
-        cx + w/2,
-        cy + h/2], dim=-1)
+    Returns:
+        Tensor[N, 4]: clipped boxes
+    """
+    dim = bboxes.dim()
+    bboxes_x = bboxes[..., 0::2]
+    bboxes_y = bboxes[..., 1::2]
+    height, width = size
 
-def rand_choose_index(n, c):
-    if n <= c:
-        return torch.randperm(n)
-    return torch.randperm(n)[:c]
+    bboxes_x = bboxes_x.clamp(min=0, max=width)
+    bboxes_y = bboxes_y.clamp(min=0, max=height)
 
-
-def restrict_bbox(bboxes, max_shape):
-    max_h, max_w = max_shape[:2]
-    return torch.stack([
-        bboxes[..., 0].clamp(0, max_w),
-        bboxes[..., 1].clamp(0, max_h),
-        bboxes[..., 2].clamp(0, max_w),
-        bboxes[..., 3].clamp(0, max_h)], dim=-1)
-
-def mirror(vals):
-    all_vals = set(vals.tolist())
-    all_vals.update(set((-vals).tolist()))
-    all_vals = sorted(list(all_vals))
-    return torch.tensor(all_vals, device=vals.device)
-
-def nonlinear_map(space, order):
-    ma, mi = space.max(), space.min()
-    normed = (space - mi) / (ma - mi)
-    normed = normed.pow(order)
-    return normed * (ma-mi) + mi
+    clipped_bboxes = torch.stack((bboxes_x, bboxes_y), dim=dim)
+    return clipped_bboxes.reshape(bboxes.shape)

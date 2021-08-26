@@ -1,5 +1,5 @@
-from ..models import HEADS, build_loss, SmoothL1Loss
-from ..core import bbox_overlaps
+from mmdet.models import HEADS, build_loss, SmoothL1Loss
+from mmdet.core import bbox_overlaps
 import torch
 from torch import nn
 from mmcv.runner import BaseModule, force_fp32
@@ -34,16 +34,16 @@ class IoUHead(BaseModule):
         self.class_agnostic = class_agnostic
         
         self.loss_type = loss_iou.type
-        assert self.loss_type in ('SmoothL1Loss', 'SimpleGFLLoss'), \
-            'IoU loss only support SmoothL1Loss or SimpleGFLLoss'
+        assert self.loss_type in ('SmoothL1Loss', 'CrossEntropyLoss'), \
+            'IoU loss only support SmoothL1Loss or CrossEntropyLoss'
+        if self.loss_type == 'CrossEntropyLoss':
+            assert loss_iou.use_sigmoid, 'only support BCE for loss_iou'
         self.loss_iou = build_loss(loss_iou)
-
         self.shared_fcs = nn.ModuleList()
         for cur_fc_channels in fc_channels:
             self.shared_fcs.append(nn.Linear(in_channels, cur_fc_channels))
             in_channels = cur_fc_channels
         self.fc_iou = nn.Linear(fc_channels[-1], 1 if class_agnostic else num_classes)
-        
         self.relu = nn.ReLU(inplace=True)
 
         if self.init_cfg is None:
@@ -59,8 +59,10 @@ class IoUHead(BaseModule):
         if not self.training:
             if self.loss_type == 'SmoothL1Loss':
                 out = out * self.target_norm.std + self.target_norm.mean
-            elif self.loss_type == 'SimpleGFLLoss':
+            elif self.loss_type == 'CrossEntropyLoss':
                 out = out.sigmoid()
+            else:
+                raise RuntimeError('unknown loss type: {}'.format(self.loss_type))
         return out
 
     @force_fp32(apply_to=('iou_score'))
@@ -71,17 +73,16 @@ class IoUHead(BaseModule):
              gt_labels,
              rois,
              img_metas):
-        target_bboxes = torch.cat([gt_bboxes[i][res.pos_assigned_gt_inds] \
-                                   for i, res in enumerate(sampling_results)])
-        target_labels = torch.cat([gt_labels[i][res.pos_assigned_gt_inds] \
-                                   for i, res in enumerate(sampling_results)])
-
+        target_bboxes = torch.cat(
+            [gt_bboxes[i][res.pos_assigned_gt_inds] \
+             for i, res in enumerate(sampling_results)])
+        target_labels = torch.cat(
+            [gt_labels[i][res.pos_assigned_gt_inds] \
+             for i, res in enumerate(sampling_results)])
         target_ious = bbox_overlaps(rois[:, 1:], target_bboxes, is_aligned=True)
         if self.loss_type == 'SmoothL1Loss':
             target_ious = (target_ious - self.target_norm.mean) / self.target_norm.std
-
         if not self.class_agnostic:
             iou_score = iou_score[torch.arange(rois.size(0)), target_labels]
-
         loss_iou = self.loss_iou(iou_score, target_ious, avg_factor=rois.size(0))
         return loss_iou

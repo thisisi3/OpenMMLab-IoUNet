@@ -1,3 +1,4 @@
+
 model = dict(
     type='FasterRCNN',
     backbone=dict(
@@ -35,8 +36,7 @@ model = dict(
         type='IoURoIHead',
         bbox_roi_extractor=dict(
             type='PrRoIExtractor',
-            roi_layer=dict(
-                type='PrRoIPool2D', pooled_height=7, pooled_width=7),
+            roi_layer=dict(type='PrRoIPool2D', pooled_height=7, pooled_width=7),
             out_channels=256,
             featmap_strides=[4, 8, 16, 32]),
         roi_generator=dict(
@@ -44,7 +44,7 @@ model = dict(
             xy_steps=16,
             wh_steps=16,
             xy_range=(0, 1),
-            area_range=(0.3333333333333333, 3),
+            area_range=(1/3, 3),
             nonlinearity=2,
             per_iou=None,
             sample_num=1000,
@@ -52,7 +52,7 @@ model = dict(
             compensate=None),
         iou_head=dict(
             type='IoUHead',
-            in_channels=12544,
+            in_channels=256 * 7 * 7,
             fc_channels=[1024, 1024],
             num_classes=80,
             class_agnostic=False,
@@ -130,13 +130,13 @@ model = dict(
             nms=dict(type='nms', iou_threshold=0.5),
             max_per_img=100,
             iou=dict(
-                nms=dict(multiclass=True, iou_threshold=0.5),
+                nms=dict(multiclass=True, iou_threshold=0.5, guide='weight'),
                 refine=dict(
                     pre_refine=100,
                     t=5,
                     omega_1=0.001,
                     omega_2=-0.01,
-                    lamb=0.5,
+                    lamb=2.0,
                     use_iou_score=True)))))
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -243,7 +243,7 @@ data = dict(
                 ])
         ]))
 evaluation = dict(interval=1, metric='bbox')
-optimizer = dict(type='SGD', lr=0.005, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.02/4, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)
 lr_config = dict(
     policy='step',
@@ -260,5 +260,4 @@ log_level = 'INFO'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
-work_dir = './work_dirs/faster_rcnn_iou_r50_fpn_bce_1x_coco_2gpu'
-gpu_ids = range(0, 2)
+

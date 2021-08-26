@@ -1,6 +1,5 @@
-from ..core import bbox_overlaps
-from .utils import *
-
+from mmdet.core import bbox_overlaps, bbox_xyxy_to_cxcywh, bbox_cxcywh_to_xyxy
+from .utils import clip_bboxes_to_image
 import math, torch
         
 class RoIGenerator(torch.nn.Module):
@@ -40,8 +39,8 @@ class RoIGenerator(torch.nn.Module):
                  compensate=None):
         super(RoIGenerator, self).__init__()
         assert 0 <= start_bin < end_bin <= 10, 'invalid start_bin and end_bin values'
-        assert not (per_iou is None and sample_num is None) and \
-            not (per_iou is not None and sample_num is not None)
+        assert (per_iou is None) ^ (sample_num is None), \
+            'choose either per_iou or sample_num'
         assert compensate is None or isinstance(compensate, dict)
         if isinstance(compensate, dict):
             assert min([v for k, v in compensate.items()]) >= 1.0
@@ -71,7 +70,8 @@ class RoIGenerator(torch.nn.Module):
             pre_num_chosen = mask.sum().item()
             chosen_delta = delta[mask]
             if pre_num_chosen > self.pre_sample:
-                chosen_delta = chosen_delta[rand_choose_index(pre_num_chosen, self.pre_sample)]
+                chosen_delta = chosen_delta[
+                    self._rand_choose_index(pre_num_chosen, self.pre_sample)]
             delta_list.append(chosen_delta)
             num_chosen = chosen_delta.size(0)
             delta_starts.append(delta_starts[-1] + num_chosen)
@@ -86,9 +86,9 @@ class RoIGenerator(torch.nn.Module):
         whd = torch.linspace(math.sqrt(self.area_range[0]),
                              math.sqrt(self.area_range[1]),
                              self.wh_steps)
-        xyd = nonlinear_map(xyd, self.nonlinearity)
-        xyd = mirror(xyd)
-        whd = nonlinear_map(whd, self.nonlinearity)
+        xyd = self._nonlinear_map(xyd, self.nonlinearity)
+        xyd = self._mirror(xyd)
+        whd = self._nonlinear_map(whd, self.nonlinearity)
         meshes = torch.stack(torch.meshgrid([xyd, xyd, whd, whd]), dim=-1)
         return meshes
 
@@ -103,16 +103,15 @@ class RoIGenerator(torch.nn.Module):
             Tensor[n, m, 4]: n x m transoformed bboxes
         """
         bboxes = bboxes.view(-1, 1, 4)
-        cxcywh = xyxy2cxcywh(bboxes)
+        cxcywh = bbox_xyxy_to_cxcywh(bboxes)
         cx, cy, w, h = [cxcywh[..., i] for i in range(4)]
         cx = cx + w * delta[..., 0]
         cy = cy + h * delta[..., 1]
         w = w * delta[..., 2]
         h = h * delta[..., 3]
         cxcywh = torch.stack([cx, cy, w, h], dim=-1)
-        return cxcywh2xyxy(cxcywh)
+        return bbox_cxcywh_to_xyxy(cxcywh)
 
-    # TODO: implement max_shape
     def generate_roi(self, gt_bboxes, max_shape=None):
         """Generate rois around gt_bboxes such that they have certain IoU overlaps with gt_bboxes"""
         sampled_delta = []
@@ -129,12 +128,34 @@ class RoIGenerator(torch.nn.Module):
                 cur_per_iou = int(per_iou * self.compensate[b]) + 1
             else:
                 cur_per_iou = per_iou
-            sampled_idx = start_mark + rand_choose_index(num_delta, cur_per_iou)
+            sampled_idx = start_mark + self._rand_choose_index(num_delta, cur_per_iou)
             sampled_delta.append(self.delta[sampled_idx])
         sampled_delta = torch.cat(sampled_delta)
         rois = self.apply_delta(gt_bboxes, sampled_delta).view(-1, 4)
         if self.sample_num is not None:
-            rois = rois[rand_choose_index(rois.size(0), self.sample_num)]
+            rois = rois[self._rand_choose_index(rois.size(0), self.sample_num)]
         else:
-            rois = rois[rand_choose_index(rois.size(0), self.max_num)]
+            rois = rois[self._rand_choose_index(rois.size(0), self.max_num)]
+        if max_shape is not None:
+            rois = clip_bboxes_to_image(rois, max_shape[:2])
         return rois
+
+    # mirror values to both sides of 0
+    def _mirror(self, vals):
+        all_vals = set(vals.tolist())
+        all_vals.update(set((-vals).tolist()))
+        all_vals = sorted(list(all_vals))
+        return torch.tensor(all_vals, device=vals.device)
+
+    # map values so that smaller values get more dense
+    def _nonlinear_map(self, space, order):
+        ma, mi = space.max(), space.min()
+        normed = (space - mi) / (ma - mi)
+        normed = normed.pow(order)
+        return normed * (ma-mi) + mi
+
+    def _rand_choose_index(self, n, c):
+        if n <= c:
+            return torch.randperm(n)
+        return torch.randperm(n)[:c]
+
