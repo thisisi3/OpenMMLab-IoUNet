@@ -173,7 +173,7 @@ The config for the improved version can be found [here](https://github.com/thisi
 
 All the following tests are done in a RTX 2080 ti GPU with batch_size=1.
 
-| mode                     | FPS  | Latency(ms) | AP    |
+| model                    | FPS  | Latency(ms) | AP    |
 | ------------------------ | ---- | ----------- | ----- |
 | FasterRCNN               | 20   | 50.00       | 0.376 |
 | IoUNet_RCNN              | 18.9 | 52.91       | 0.378 |
