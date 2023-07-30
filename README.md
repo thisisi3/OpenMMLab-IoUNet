@@ -1,10 +1,8 @@
 ## Introduction
 
-This project is trying to reproduce IoUNet, which is proposed in paper [Acquisition of Localization Confidence for Accurate Object Detection](https://arxiv.org/pdf/1807.11590.pdf). 
+In this project I reproduce IoUNet, which is proposed in paper [Acquisition of Localization Confidence for Accurate Object Detection](https://arxiv.org/pdf/1807.11590.pdf). 
 
-This project is also for the contest [OpenMMLab Algorithm Ecological Challenge](https://openmmlab.com/competitions/algorithm-2021).
-
-This is NOT the official implementation.
+This is NOT the official implementation! As far as I know, authors of IoUNet have not released code for the model. But they do released the code for the novel [PreciseRoIPooling](https://github.com/vacancy/PreciseRoIPooling) method proposed in the paper. 
 
 Quick peek at the result:
 
@@ -35,7 +33,7 @@ For the rest, I closely follow the paper.
 
 ## Experiments
 
-**MMDetection:** this project is based on version v2.14.0.
+**MMDetection:** this project is based on MMDetection v2.14.0.
 
 **MMCV:** version v1.3.8
 
