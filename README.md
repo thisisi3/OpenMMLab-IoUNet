@@ -1,10 +1,10 @@
 ## Introduction
 
-In this project I reproduce IoUNet, which is proposed in paper [Acquisition of Localization Confidence for Accurate Object Detection](https://arxiv.org/pdf/1807.11590.pdf). 
+In this project I reproduce [IoUNet](https://arxiv.org/pdf/1807.11590.pdf) based on MMDetection.
 
-This is NOT the official implementation! As far as I know, authors of IoUNet have not released code for the model. But they do released the code for the novel [PreciseRoIPooling](https://github.com/vacancy/PreciseRoIPooling) method proposed in the paper. 
+This is NOT the official implementation! As far as I know, authors of IoUNet have not released code for the model. But they do have released the code for the novel [PreciseRoIPooling](https://github.com/vacancy/PreciseRoIPooling) method they proposed in the paper. 
 
-Quick peek at the result:
+This implementation achieves the same accuracy as reported in the paper, quick peek at some details:
 
 > **The paper:** improved the R50 baseline by 1.7 AP.
 >
